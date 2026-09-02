@@ -15,6 +15,7 @@ services:
   api:
     build: .
     environment:
+      NODE_ENV: development
       DATABASE_URL: postgresql://library_user:library_password@banco:5432/library_db
       SESSION_SECRET: ${SESSION_SECRET:-segredo-local-altere-em-producao}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}

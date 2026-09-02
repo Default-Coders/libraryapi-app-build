@@ -197,6 +197,88 @@ O backup localizado em `backend/backups/biblioteca_2026-09-01.dump` pode ser res
 
 Não restaure por cima de um banco com dados importantes sem criar um backup prévio.
 
+### 6.5 Backup e restauração do PostgreSQL via Docker
+
+Execute os comandos desta seção no diretório `backend`, onde está o arquivo `docker-compose.yml`. O serviço PostgreSQL do projeto chama-se `banco`, o banco chama-se `library_db` e o usuário padrão é `library_user`.
+
+Os exemplos usam o formato customizado do PostgreSQL (`pg_dump -Fc`). Esse formato é compactado, pode ser inspecionado com `pg_restore -l` e permite restaurações seletivas. Ele não deve ser aberto ou alterado como arquivo de texto.
+
+#### Criar um backup
+
+Primeiro, confirme que o banco está saudável:
+
+```powershell
+docker compose ps
+```
+
+Crie a pasta local, gere o dump dentro do contêiner e copie-o para o projeto. Troque a data no nome do arquivo a cada execução para não substituir backups anteriores:
+
+```powershell
+New-Item -ItemType Directory -Path .\backups -Force
+docker compose exec -T banco pg_dump -U library_user -d library_db -Fc -f /tmp/biblioteca_2026-09-02.dump
+docker compose cp banco:/tmp/biblioteca_2026-09-02.dump .\backups\biblioteca_2026-09-02.dump
+```
+
+Confirme que o arquivo existe e possui conteúdo:
+
+```powershell
+Get-Item .\backups\biblioteca_2026-09-02.dump
+```
+
+Para validar o catálogo do backup sem restaurá-lo:
+
+```powershell
+docker compose exec -T banco pg_restore -l /tmp/biblioteca_2026-09-02.dump
+```
+
+O backup gerado em 2 de setembro de 2026 está em `backend/backups/biblioteca_2026-09-02.dump`. Ele foi criado com PostgreSQL 16.15, formato customizado, e teve seu catálogo validado com `pg_restore -l`.
+
+#### Restaurar um backup
+
+> Atenção: os comandos `dropdb` e `createdb` abaixo substituem integralmente o banco atual. Confirme o nome do arquivo e crie um backup preventivo antes de continuar.
+
+1. Crie um backup preventivo do estado atual seguindo o procedimento anterior.
+2. Pare a API para encerrar novas operações e conexões ao banco:
+
+```powershell
+docker compose stop api
+```
+
+3. Copie o dump escolhido para dentro do contêiner:
+
+```powershell
+docker compose cp .\backups\biblioteca_2026-09-02.dump banco:/tmp/restauracao.dump
+```
+
+4. Apague e recrie somente o banco `library_db`:
+
+```powershell
+docker compose exec -T banco dropdb -U library_user --if-exists --force library_db
+docker compose exec -T banco createdb -U library_user -O library_user library_db
+```
+
+5. Restaure o dump sem importar proprietários ou privilégios de outro ambiente:
+
+```powershell
+docker compose exec -T banco pg_restore -U library_user -d library_db --no-owner --no-privileges /tmp/restauracao.dump
+```
+
+6. Inicie a API novamente e confira os serviços:
+
+```powershell
+docker compose start api
+docker compose ps
+```
+
+7. Valide o banco restaurado:
+
+```powershell
+docker compose exec -T banco psql -U library_user -d library_db -c "\dt"
+docker compose exec -T banco psql -U library_user -d library_db -c "SELECT COUNT(*) FROM tb_book;"
+```
+
+Depois de uma restauração, valide o login e as operações principais do sistema. Em ambientes que não sejam de desenvolvimento, mantenha `DATABASE_SYNCHRONIZE=false` para evitar mudanças automáticas no esquema restaurado. O dump lógico contém a tabela `tb_session`; para invalidar sessões antigas após a restauração, execute `TRUNCATE TABLE tb_session;` conscientemente e exija novo login dos usuários.
+
 ## 7. Entidades e enumerações
 
 ### 7.1 Administrador
