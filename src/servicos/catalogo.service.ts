@@ -2,9 +2,12 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, ILike, Repository } from 'typeorm';
+import { unlink } from 'node:fs/promises';
+import { basename, resolve } from 'node:path';
 import {
   Categoria,
   EntradaFila,
@@ -19,12 +22,37 @@ import {
   DadosLivro,
 } from '../comum/contratos.js';
 @Injectable()
-export class CatalogoService {
+export class CatalogoService implements OnModuleInit {
   constructor(
     @InjectRepository(Categoria) private categorias: Repository<Categoria>,
     @InjectRepository(Livro) private livros: Repository<Livro>,
     private banco: DataSource,
   ) {}
+  async onModuleInit() {
+    const semIsbn = await this.livros
+      .createQueryBuilder('livro')
+      .where('livro.isbn IS NULL')
+      .orWhere("BTRIM(livro.isbn) = ''")
+      .orderBy('livro.id', 'ASC')
+      .getMany();
+    let sequencia = 1;
+    for (const livro of semIsbn) {
+      let isbn: string;
+      do isbn = this.gerarIsbnFicticio(sequencia++);
+      while (await this.livros.existsBy({ isbn }));
+      livro.isbn = isbn;
+      await this.livros.save(livro);
+    }
+  }
+  private gerarIsbnFicticio(sequencia: number) {
+    const base = `97865${sequencia.toString().padStart(7, '0')}`;
+    const soma = [...base].reduce(
+      (total, digito, indice) =>
+        total + Number(digito) * (indice % 2 === 0 ? 1 : 3),
+      0,
+    );
+    return `${base}${(10 - (soma % 10)) % 10}`;
+  }
   async listarCategorias(nome?: string) {
     return this.categorias.find({
       where: { ativo: true, ...(nome ? { nome: ILike(`%${nome}%`) } : {}) },
@@ -75,15 +103,18 @@ export class CatalogoService {
   }
   async salvarLivro(d: DadosLivro, id?: string) {
     const categoria = await this.obterCategoria(d.categoryId);
-    if (!id && d.isbn && (await this.livros.existsBy({ isbn: d.isbn })))
-      throw new ConflictException('Já existe um livro com este ISBN.');
+    if (d.isbn) {
+      const repetido = await this.livros.findOneBy({ isbn: d.isbn });
+      if (repetido && repetido.id !== id)
+        throw new ConflictException('Já existe um livro com este ISBN.');
+    }
     const item = id
       ? await this.obterLivro(id)
       : this.livros.create({ quantidadeDisponivel: d.totalQuantity });
     item.titulo = d.title;
     item.autor = d.author;
     item.editora = d.publisher;
-    if (!id) item.isbn = d.isbn;
+    if (d.isbn !== undefined) item.isbn = d.isbn;
     item.anoPublicacao = d.publicationYear;
     item.urlQrcode = d.qrcodeUrl;
     item.categoria = categoria;
@@ -93,7 +124,7 @@ export class CatalogoService {
     return this.livros.save(item);
   }
   async ajustarEstoque(id: string, d: DadosEstoque) {
-    return this.banco.transaction(async (gestor) => {
+    await this.banco.transaction(async (gestor) => {
       const repo = gestor.getRepository(Livro);
       const livro = await repo
         .createQueryBuilder('l')
@@ -139,8 +170,27 @@ export class CatalogoService {
           await repo.save(livro);
         }
       }
-      return livro;
     });
+    return this.obterLivro(id);
+  }
+  async atualizarCapa(id: string, urlCapa: string) {
+    const livro = await this.obterLivro(id);
+    const capaAnterior = livro.urlCapa;
+    livro.urlCapa = urlCapa;
+    const salvo = await this.livros.save(livro);
+    if (capaAnterior) await this.apagarArquivoCapa(capaAnterior);
+    return salvo;
+  }
+  async removerCapa(id: string) {
+    const livro = await this.obterLivro(id);
+    const capaAnterior = livro.urlCapa;
+    livro.urlCapa = null;
+    await this.livros.save(livro);
+    if (capaAnterior) await this.apagarArquivoCapa(capaAnterior);
+  }
+  private async apagarArquivoCapa(urlCapa: string) {
+    const arquivo = resolve(process.cwd(), 'uploads', 'covers', basename(urlCapa));
+    await unlink(arquivo).catch(() => undefined);
   }
   async desativarLivro(id: string) {
     const item = await this.obterLivro(id);

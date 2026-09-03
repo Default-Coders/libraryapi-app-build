@@ -74,13 +74,15 @@ export class Livro extends EntidadeBase {
   @Column({ name: 'title', length: 150 }) titulo!: string;
   @Column({ name: 'author', length: 150 }) autor!: string;
   @Column({ name: 'publisher', nullable: true, length: 100 }) editora?: string;
-  @Column({ unique: true, nullable: true, length: 20, update: false })
+  @Column({ unique: true, nullable: true, length: 20 })
   isbn?: string;
   @Column({ name: 'publication_year', nullable: true }) anoPublicacao?: number;
   @Column({ name: 'total_quantity' }) quantidadeTotal!: number;
   @Column({ name: 'available_quantity', nullable: true })
   quantidadeDisponivel!: number;
   @Column({ name: 'qrcode_url', nullable: true }) urlQrcode?: string;
+  @Column({ name: 'cover_url', type: 'varchar', nullable: true, length: 300 })
+  urlCapa?: string | null;
   @ManyToOne(() => Categoria, { eager: true, nullable: false })
   @JoinColumn({ name: 'category_id' })
   categoria!: Categoria;

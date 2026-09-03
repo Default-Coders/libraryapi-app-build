@@ -1,6 +1,6 @@
 # Contexto do Backend NestJS — Biblioteca da ETE Integral
 
-> Última atualização: 1º de setembro de 2026  
+> Última atualização: 3 de setembro de 2026  
 > Implementação: NestJS/TypeScript  
 > Idioma interno: português do Brasil (`pt-BR`)  
 > Fuso horário da aplicação e do banco: `America/Sao_Paulo`
@@ -231,7 +231,7 @@ Para validar o catálogo do backup sem restaurá-lo:
 docker compose exec -T banco pg_restore -l /tmp/biblioteca_2026-09-02.dump
 ```
 
-O backup gerado em 2 de setembro de 2026 está em `backend/backups/biblioteca_2026-09-02.dump`. Ele foi criado com PostgreSQL 16.15, formato customizado, e teve seu catálogo validado com `pg_restore -l`.
+Os backups validados estão em `backend/backups`. O mais recente é `biblioteca_2026-09-03.dump`, criado em 3 de setembro de 2026 com PostgreSQL 16.15, formato customizado e 41 entradas de catálogo. A validação foi feita com `pg_restore --list` e confirmou tabelas, dados, índices e chaves estrangeiras.
 
 #### Restaurar um backup
 
@@ -324,11 +324,12 @@ Campos: UUID, nome único, descrição e situação ativa. O nome é salvo em ma
 
 ### 7.4 Livro
 
-Campos: título, autor, editora, ISBN, ano de publicação, quantidade total, quantidade disponível, URL de QR Code, categoria e situação ativa.
+Campos: título, autor, editora, ISBN, ano de publicação, quantidade total, quantidade disponível, URL de QR Code, URL da capa, categoria e situação ativa.
 
 - ISBN é opcional, mas, quando informado, deve conter exatamente 10 ou 13 dígitos;
 - ISBN não pode ser duplicado;
-- ISBN não é alterado durante a edição;
+- ISBN pode ser alterado durante a edição e continua sujeito à unicidade;
+- livros com ISBN nulo ou vazio recebem automaticamente um ISBN-13 fictício único na inicialização;
 - um novo livro começa com quantidade disponível igual à total;
 - o total não pode ficar abaixo dos exemplares reservados ou emprestados.
 
@@ -488,7 +489,7 @@ Prefixo global: `/api`.
 
 | Método | Rota | Acesso | Resposta/Função |
 |---|---|---|---|
-| POST | `/auth/login` | Público | Cria sessão e retorna o perfil. |
+| POST | `/auth/login` | Público | Cria sessão e retorna perfil, nome e e-mail. |
 | POST | `/auth/logout` | Público | Destrói a sessão; `204`. |
 
 ### 10.2 Administradores e alunos
@@ -496,6 +497,11 @@ Prefixo global: `/api`.
 | Método | Rota | Acesso | Função |
 |---|---|---|---|
 | POST | `/admins` | Admin | Cadastra administrador. |
+| GET | `/admins` | Admin | Lista e busca administradores, incluindo inativos quando solicitado. |
+| PUT | `/admins/:id` | Admin | Atualiza nome e e-mail. |
+| PATCH | `/admins/:id/password` | Admin | Redefine a senha. |
+| PATCH | `/admins/:id/reactivate` | Admin | Reativa administrador; `204`. |
+| DELETE | `/admins/:id` | Admin | Desativa administrador; `204`. |
 | POST | `/students` | Admin | Cadastra aluno. |
 | GET | `/students` | Admin | Lista e filtra alunos. |
 | GET | `/students/:id` | Admin | Consulta aluno, inclusive inativo. |
@@ -537,8 +543,10 @@ Todas as rotas exigem autenticação; mutações exigem administrador.
 | GET | `/books` | Autenticado | Lista livros ativos. |
 | GET | `/books/:id` | Autenticado | Consulta livro. |
 | POST | `/books` | Admin | Cadastra livro. |
-| PUT | `/books/:id` | Admin | Atualiza livro, preservando ISBN. |
+| PUT | `/books/:id` | Admin | Atualiza os dados do livro, inclusive ISBN. |
 | PATCH | `/books/:id/stock` | Admin | Define novo estoque total. |
+| POST | `/books/:id/cover` | Admin | Envia ou substitui capa JPEG, PNG ou WebP de até 2 MB. |
+| DELETE | `/books/:id/cover` | Admin | Remove a capa e o arquivo correspondente; `204`. |
 | DELETE | `/books/:id` | Admin | Desativa; `204`. |
 
 ### 10.5 Reservas

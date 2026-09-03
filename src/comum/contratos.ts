@@ -19,6 +19,10 @@ export class DadosAdministrador {
   @IsEmail() email!: string;
   @MinLength(6) password!: string;
 }
+export class DadosAtualizacaoAdministrador {
+  @IsString() @IsNotEmpty() name!: string;
+  @IsEmail() email!: string;
+}
 export class DadosAluno {
   @IsString() @IsNotEmpty() name!: string;
   @IsEmail() email!: string;
@@ -99,6 +103,7 @@ export const saidaLivro = (livro: any) => ({
   totalQuantity: livro.quantidadeTotal,
   availableQuantity: livro.quantidadeDisponivel,
   qrcodeUrl: livro.urlQrcode,
+  coverUrl: livro.urlCapa,
   category: saidaCategoria(livro.categoria),
   active: livro.ativo,
 });

@@ -112,12 +112,12 @@ export class UsuariosService implements OnApplicationBootstrap {
     });
     if (administrador && (await bcrypt.compare(senha, administrador.senha))) {
       await this.tentativas.delete({ email });
-      return { id: administrador.id, perfil: 'ROLE_ADMIN' as const, email };
+      return { id: administrador.id, perfil: 'ROLE_ADMIN' as const, email, nome: administrador.nome };
     }
     const aluno = await this.alunos.findOneBy({ email, ativo: true });
     if (aluno && (await bcrypt.compare(senha, aluno.senha))) {
       await this.tentativas.delete({ email });
-      return { id: aluno.id, perfil: 'ROLE_STUDENT' as const, email };
+      return { id: aluno.id, perfil: 'ROLE_STUDENT' as const, email, nome: aluno.nome };
     }
     const falha = registro ?? this.tentativas.create({ email, quantidade: 0 });
     falha.quantidade++;
@@ -141,6 +141,52 @@ export class UsuariosService implements OnApplicationBootstrap {
         primeiroAcesso: true,
       }),
     );
+  }
+  async listarAdministradores(consulta?: string, incluirInativos = false) {
+    const todos = await this.administradores.find({
+      where: incluirInativos ? {} : { ativo: true },
+      order: { nome: 'ASC' },
+    });
+    const busca = (consulta ?? '').trim().toLowerCase();
+    return todos.filter(
+      (admin) =>
+        !busca ||
+        admin.nome.toLowerCase().includes(busca) ||
+        admin.email.toLowerCase().includes(busca),
+    );
+  }
+  async obterAdministrador(id: string) {
+    const admin = await this.administradores.findOneBy({ id });
+    if (!admin) throw new NotFoundException('Administrador não encontrado.');
+    return admin;
+  }
+  async atualizarAdministrador(
+    id: string,
+    dados: { name: string; email: string },
+  ) {
+    const admin = await this.obterAdministrador(id);
+    const repetido = await this.administradores.findOneBy({ email: dados.email });
+    if (repetido && repetido.id !== id)
+      throw new ConflictException('Já existe um administrador com este e-mail.');
+    admin.nome = dados.name;
+    admin.email = dados.email;
+    return this.administradores.save(admin);
+  }
+  async redefinirSenhaAdministrador(id: string, novaSenha: string) {
+    const admin = await this.obterAdministrador(id);
+    admin.senha = await bcrypt.hash(novaSenha, 10);
+    admin.primeiroAcesso = true;
+    await this.administradores.save(admin);
+  }
+  async reativarAdministrador(id: string) {
+    const admin = await this.obterAdministrador(id);
+    admin.ativo = true;
+    await this.administradores.save(admin);
+  }
+  async desativarAdministrador(id: string) {
+    const admin = await this.obterAdministrador(id);
+    admin.ativo = false;
+    await this.administradores.save(admin);
   }
   async criarAluno(dados: DadosAluno) {
     if (await this.alunos.existsBy({ email: dados.email }))

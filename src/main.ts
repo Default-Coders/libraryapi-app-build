@@ -1,13 +1,19 @@
 import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { mkdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import pg from 'pg';
 import { AppModule } from './app.module.js';
 import { FiltroErros } from './comum/filtro-erros.js';
 async function iniciar() {
-  const aplicacao = await NestFactory.create(AppModule);
+  const aplicacao = await NestFactory.create<NestExpressApplication>(AppModule);
+  const pastaUploads = resolve(process.cwd(), 'uploads');
+  await mkdir(resolve(pastaUploads, 'covers'), { recursive: true });
+  aplicacao.useStaticAssets(pastaUploads, { prefix: '/uploads/' });
   const origens = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
     .split(',')
     .map((o) => o.trim());

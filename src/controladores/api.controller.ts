@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -12,11 +13,18 @@ import {
   Req,
   Res,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { resolve } from 'node:path';
 import type { Response } from 'express';
 import {
   DadosAcesso,
   DadosAdministrador,
+  DadosAtualizacaoAdministrador,
   DadosAluno,
   DadosAtualizacaoAluno,
   DadosCategoria,
@@ -49,7 +57,7 @@ export class AutenticacaoController {
   ) {
     const usuario = await this.usuarios.autenticar(d.email, d.password);
     (req.session as any).usuario = usuario;
-    return { role: usuario.perfil };
+    return { role: usuario.perfil, name: usuario.nome, email: usuario.email };
   }
   @Post('logout') @HttpCode(204) sair(@Req() req: any, @Res() res: Response) {
     req.session.destroy(() => res.status(204).send());
@@ -68,6 +76,42 @@ export class AdministradoresController {
       firstLogin: a.primeiroAcesso,
       active: a.ativo,
     };
+  }
+  @Get() async listar(
+    @Query('query') consulta?: string,
+    @Query('includeInactive') incluirInativos?: string,
+  ) {
+    return (
+      await this.usuarios.listarAdministradores(
+        consulta,
+        incluirInativos === 'true',
+      )
+    ).map((a) => ({
+      id: a.id,
+      name: a.nome,
+      email: a.email,
+      firstLogin: a.primeiroAcesso,
+      active: a.ativo,
+    }));
+  }
+  @Put(':id') async atualizar(
+    @Param('id') id: string,
+    @Body() d: DadosAtualizacaoAdministrador,
+  ) {
+    const a = await this.usuarios.atualizarAdministrador(id, d);
+    return { id: a.id, name: a.nome, email: a.email, firstLogin: a.primeiroAcesso, active: a.ativo };
+  }
+  @Patch(':id/password') @HttpCode(204) async senha(
+    @Param('id') id: string,
+    @Body() d: DadosSenha,
+  ) {
+    await this.usuarios.redefinirSenhaAdministrador(id, d.newPassword);
+  }
+  @Patch(':id/reactivate') @HttpCode(204) async reativar(@Param('id') id: string) {
+    await this.usuarios.reativarAdministrador(id);
+  }
+  @Delete(':id') @HttpCode(204) async desativar(@Param('id') id: string) {
+    await this.usuarios.desativarAdministrador(id);
   }
 }
 @Controller('students')
@@ -189,6 +233,39 @@ export class LivrosController {
     @Body() d: DadosEstoque,
   ) {
     return saidaLivro(await this.catalogo.ajustarEstoque(id, d));
+  }
+  @Post(':id/cover')
+  @UseGuards(SomenteAdministrador)
+  @UseInterceptors(FileInterceptor('cover', { limits: { fileSize: 2 * 1024 * 1024 } }))
+  async enviarCapa(@Param('id') id: string, @UploadedFile() arquivo: any) {
+    if (!arquivo) throw new BadRequestException('Selecione uma imagem para a capa.');
+    const extensoes: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+    };
+    const extensao = extensoes[arquivo.mimetype];
+    if (!extensao)
+      throw new BadRequestException('A capa deve ser uma imagem JPEG, PNG ou WebP.');
+    const nome = `${id}-${randomUUID()}${extensao}`;
+    const pasta = resolve(process.cwd(), 'uploads', 'covers');
+    await mkdir(pasta, { recursive: true });
+    const destino = resolve(pasta, nome);
+    await writeFile(destino, arquivo.buffer);
+    try {
+      return saidaLivro(
+        await this.catalogo.atualizarCapa(id, `/uploads/covers/${nome}`),
+      );
+    } catch (erro) {
+      await unlink(destino).catch(() => undefined);
+      throw erro;
+    }
+  }
+  @Delete(':id/cover')
+  @UseGuards(SomenteAdministrador)
+  @HttpCode(204)
+  async removerCapa(@Param('id') id: string) {
+    await this.catalogo.removerCapa(id);
   }
   @Delete(':id') @UseGuards(SomenteAdministrador) @HttpCode(204) async apagar(
     @Param('id') id: string,
