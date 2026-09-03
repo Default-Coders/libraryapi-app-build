@@ -20,6 +20,7 @@ import {
   AutenticacaoController,
   CategoriasController,
   FilaController,
+  HealthController,
   LivrosController,
   ReservasController,
 } from './controladores/api.controller.js';
@@ -44,9 +45,10 @@ const entidades = [
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const bruta =
-          config.get<string>('DATABASE_URL') ??
-          'postgresql://library_user:library_password@localhost:5432/library_db';
+        const bruta = config.get<string>('DATABASE_URL');
+        if (!bruta) {
+          throw new Error('DATABASE_URL is not defined in the environment variables.');
+        }
         const url = bruta.replace(/^jdbc:/, '');
         return {
           type: 'postgres' as const,
@@ -56,6 +58,10 @@ const entidades = [
           entities: entidades,
           synchronize: config.get('DATABASE_SYNCHRONIZE', 'true') === 'true',
           timezone: 'America/Sao_Paulo',
+          extra: {
+            max: 20,
+            connectionTimeoutMillis: 5000,
+          },
         };
       },
     }),
@@ -69,6 +75,7 @@ const entidades = [
     LivrosController,
     ReservasController,
     FilaController,
+    HealthController,
   ],
   providers: [
     UsuariosService,

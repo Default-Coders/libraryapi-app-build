@@ -65,7 +65,7 @@ backend2/
 │   │   ├── filtro-erros.ts           # Formato global de erros
 │   │   └── seguranca.ts              # Guards e usuário da sessão
 │   ├── controladores/
-│   │   └── api.controller.ts         # Todos os endpoints REST
+│   │   └── api.controller.ts         # Todos os endpoints REST (inclui Health)
 │   ├── dominio/
 │   │   └── entidades.ts              # Entidades e enumerações TypeORM
 │   └── servicos/
@@ -74,6 +74,7 @@ backend2/
 │       └── circulacao.service.ts      # Reservas, fila, retirada e devolução
 ├── .env.example
 ├── .dockerignore
+├── typeorm-datasource.ts             # Configuração para CLI de migrações do TypeORM
 ├── Dockerfile
 ├── docker-compose.yml
 ├── package.json
@@ -145,12 +146,12 @@ Antes de produção:
 
 | Variável | Padrão | Finalidade |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://library_user:library_password@localhost:5432/library_db` | URL de conexão PostgreSQL. Uma URL iniciada por `jdbc:` também é aceita e tem o prefixo removido. |
-| `DATABASE_USER` | definido na URL | Usuário opcional separado. |
-| `DATABASE_PASSWORD` | definido na URL | Senha opcional separada. |
-| `DATABASE_SYNCHRONIZE` | `true` | Permite ao TypeORM sincronizar o esquema. Em produção ou banco restaurado, use `false`. |
-| `ALLOWED_ORIGINS` | `http://localhost:3000` | Lista de origens CORS separadas por vírgula. |
-| `SESSION_SECRET` | valor local inseguro | Assinatura da sessão. Deve ser alterado fora do desenvolvimento. |
+| `DATABASE_URL` | Obrigatório | URL de conexão PostgreSQL. Uma URL iniciada por `jdbc:` também é aceita e tem o prefixo removido. O uso via Supabase exige credenciais embutidas na URL. |
+| `DATABASE_USER` | Opcional | Usuário opcional separado se não embutido na URL. |
+| `DATABASE_PASSWORD` | Opcional | Senha opcional separada se não embutida na URL. |
+| `DATABASE_SYNCHRONIZE` | `false` | Permite ao TypeORM sincronizar o esquema. Em produção ou banco restaurado, deve-se usar `false` e depender de migrações. |
+| `ALLOWED_ORIGINS` | Obrigatório | Lista de origens CORS separadas por vírgula. |
+| `SESSION_SECRET` | Obrigatório | Assinatura da sessão. Obrigatório configurar com um segredo forte. |
 | `PORT` | `8080` | Porta HTTP da API. |
 | `NODE_ENV` | `development` | Em `production`, o cookie de sessão recebe `secure: true`. |
 
@@ -580,6 +581,12 @@ Quando não há estoque, `POST /reservations` retorna:
 | GET | `/waiting-list` | Admin | Lista todas as entradas. |
 | GET | `/waiting-list/:id` | Autenticado | Consulta entrada. |
 
+### 10.7 Observabilidade
+
+| Método | Rota | Acesso | Função |
+|---|---|---|---|
+| GET | `/health` | Público | Endpoint de verificação de saúde e disponibilidade (checa latência do banco). |
+
 ## 11. Contratos JSON
 
 ### 11.1 Administrador
@@ -800,13 +807,13 @@ Os testes atuais são unitários de compatibilidade de saída. Ainda é recomend
 
 ## 18. Limitações e próximos passos recomendados
 
-1. Criar migrações TypeORM e definir `DATABASE_SYNCHRONIZE=false` em produção.
-2. Implementar testes e2e com PostgreSQL isolado.
+1. ~~Criar migrações TypeORM e definir `DATABASE_SYNCHRONIZE=false` em produção.~~ (Concluído: `typeorm-datasource.ts` configurado).
+2. Implementar testes automatizados unitários, e2e e de integração com PostgreSQL isolado.
 3. Integrar serviço de e-mail para avisos de promoção da fila.
 4. Mover o rate limit para armazenamento compartilhado caso a API use várias réplicas.
 5. Adicionar documentação OpenAPI/Swagger.
 6. Definir rotação e política de expiração do `SESSION_SECRET`.
-7. Adicionar observabilidade estruturada, métricas e auditoria administrativa.
+7. Adicionar observabilidade estruturada e métricas avançadas (Health check básico concluído).
 8. Incluir limpeza periódica das sessões e tentativas de acesso antigas.
 
 ## 19. Resumo operacional

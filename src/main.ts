@@ -23,15 +23,20 @@ async function iniciar() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Cache-Control', 'Content-Type'],
   });
-  const url = (
-    process.env.DATABASE_URL ??
-    'postgresql://library_user:library_password@localhost:5432/library_db'
-  ).replace(/^jdbc:/, '');
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    throw new Error('DATABASE_URL is not defined in the environment variables.');
+  }
+  const url = dbUrl.replace(/^jdbc:/, '');
   const Armazenamento = connectPgSimple(session);
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (!sessionSecret) {
+    throw new Error('SESSION_SECRET is not defined in the environment variables.');
+  }
   aplicacao.use(
     session({
       name: 'JSESSIONID',
-      secret: process.env.SESSION_SECRET ?? 'troque-este-segredo-em-producao',
+      secret: sessionSecret,
       resave: false,
       saveUninitialized: false,
       cookie: {
@@ -51,6 +56,10 @@ async function iniciar() {
       }),
     }),
   );
+  // Rate limit: Atualmente utiliza um Map em memória (60 req/min).
+  // Avaliação: Em um ambiente com múltiplas instâncias (ex: Kubernetes), o limite será aplicado
+  // por instância, o que é aceitável para o cenário inicial. Se for estritamente necessário
+  // um limite global, deve-se usar Redis ou uma tabela no banco (ex: Supabase) como armazenamento compartilhado.
   const acessos = new Map<string, { inicio: number; quantidade: number }>();
   aplicacao.use((requisicao: any, resposta: any, proximo: () => void) => {
     const chave =

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -34,11 +35,11 @@ export class UsuariosService implements OnApplicationBootstrap {
   ) {}
   async onApplicationBootstrap() {
     const emailAdmin = 'admin@biblioteca.com';
-    const senhaPadrao = '123456';
-    const senhaHash = await bcrypt.hash(senhaPadrao, 10);
     const admin = await this.administradores.findOneBy({ email: emailAdmin });
 
     if (!admin) {
+      const senhaPadrao = randomBytes(6).toString('hex');
+      const senhaHash = await bcrypt.hash(senhaPadrao, 10);
       await this.administradores.save(
         this.administradores.create({
           nome: 'Administrador',
@@ -49,12 +50,6 @@ export class UsuariosService implements OnApplicationBootstrap {
       );
       new Logger(UsuariosService.name).log(
         `Administrador inicial criado — e-mail: ${emailAdmin} | senha: ${senhaPadrao}`,
-      );
-    } else {
-      admin.senha = senhaHash;
-      await this.administradores.save(admin);
-      new Logger(UsuariosService.name).log(
-        `Senha do administrador ${emailAdmin} atualizada para: ${senhaPadrao}`,
       );
     }
   }

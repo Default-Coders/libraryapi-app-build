@@ -15,6 +15,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
@@ -47,6 +48,14 @@ import {
 import { UsuariosService } from '../servicos/usuarios.service.js';
 import { CatalogoService } from '../servicos/catalogo.service.js';
 import { CirculacaoService } from '../servicos/circulacao.service.js';
+
+@Controller('health')
+export class HealthController {
+  @Get()
+  verificar() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
+}
 
 @Controller('auth')
 export class AutenticacaoController {
@@ -95,22 +104,22 @@ export class AdministradoresController {
     }));
   }
   @Put(':id') async atualizar(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() d: DadosAtualizacaoAdministrador,
   ) {
     const a = await this.usuarios.atualizarAdministrador(id, d);
     return { id: a.id, name: a.nome, email: a.email, firstLogin: a.primeiroAcesso, active: a.ativo };
   }
   @Patch(':id/password') @HttpCode(204) async senha(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() d: DadosSenha,
   ) {
     await this.usuarios.redefinirSenhaAdministrador(id, d.newPassword);
   }
-  @Patch(':id/reactivate') @HttpCode(204) async reativar(@Param('id') id: string) {
+  @Patch(':id/reactivate') @HttpCode(204) async reativar(@Param('id', ParseUUIDPipe) id: string) {
     await this.usuarios.reativarAdministrador(id);
   }
-  @Delete(':id') @HttpCode(204) async desativar(@Param('id') id: string) {
+  @Delete(':id') @HttpCode(204) async desativar(@Param('id', ParseUUIDPipe) id: string) {
     await this.usuarios.desativarAdministrador(id);
   }
 }
@@ -144,12 +153,12 @@ export class AlunosController {
     await this.usuarios.alterarSenha(u.id, d.currentPassword, d.newPassword);
   }
   @Get(':id') @UseGuards(SomenteAdministrador) async obter(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     return saidaAluno(await this.usuarios.obter(id));
   }
   @Put(':id') @UseGuards(SomenteAdministrador) async atualizar(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() d: DadosAtualizacaoAluno,
   ) {
     return saidaAluno(await this.usuarios.atualizar(id, d));
@@ -157,17 +166,17 @@ export class AlunosController {
   @Patch(':id/password')
   @UseGuards(SomenteAdministrador)
   @HttpCode(204)
-  async senha(@Param('id') id: string, @Body() d: DadosSenha) {
+  async senha(@Param('id', ParseUUIDPipe) id: string, @Body() d: DadosSenha) {
     await this.usuarios.redefinirSenha(id, d.newPassword);
   }
   @Patch(':id/reactivate')
   @UseGuards(SomenteAdministrador)
   @HttpCode(204)
-  async reativar(@Param('id') id: string) {
+  async reativar(@Param('id', ParseUUIDPipe) id: string) {
     await this.usuarios.reativar(id);
   }
   @Delete(':id') @UseGuards(SomenteAdministrador) @HttpCode(204) async apagar(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     await this.usuarios.desativar(id);
   }
@@ -182,7 +191,7 @@ export class CategoriasController {
   @Get() async listar() {
     return (await this.catalogo.listarCategorias()).map(saidaCategoria);
   }
-  @Get(':id') async obter(@Param('id') id: string) {
+  @Get(':id') async obter(@Param('id', ParseUUIDPipe) id: string) {
     return saidaCategoria(await this.catalogo.obterCategoria(id));
   }
   @Post() @UseGuards(SomenteAdministrador) async criar(
@@ -191,7 +200,7 @@ export class CategoriasController {
     return saidaCategoria(await this.catalogo.salvarCategoria(d));
   }
   @Put(':id') @UseGuards(SomenteAdministrador) async atualizar(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() d: DadosCategoria,
   ) {
     return saidaCategoria(await this.catalogo.salvarCategoria(d, id));
@@ -199,13 +208,13 @@ export class CategoriasController {
   @Delete(':id/permanent')
   @UseGuards(SomenteAdministrador)
   @HttpCode(204)
-  async excluir(@Param('id') id: string) {
+  async excluir(@Param('id', ParseUUIDPipe) id: string) {
     await this.catalogo.excluirCategoria(id);
   }
   @Delete(':id')
   @UseGuards(SomenteAdministrador)
   @HttpCode(204)
-  async desativar(@Param('id') id: string) {
+  async desativar(@Param('id', ParseUUIDPipe) id: string) {
     await this.catalogo.desativarCategoria(id);
   }
 }
@@ -216,20 +225,20 @@ export class LivrosController {
   @Get() async listar() {
     return (await this.catalogo.listarLivros()).map(saidaLivro);
   }
-  @Get(':id') async obter(@Param('id') id: string) {
+  @Get(':id') async obter(@Param('id', ParseUUIDPipe) id: string) {
     return saidaLivro(await this.catalogo.obterLivro(id));
   }
   @Post() @UseGuards(SomenteAdministrador) async criar(@Body() d: DadosLivro) {
     return saidaLivro(await this.catalogo.salvarLivro(d));
   }
   @Put(':id') @UseGuards(SomenteAdministrador) async atualizar(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() d: DadosLivro,
   ) {
     return saidaLivro(await this.catalogo.salvarLivro(d, id));
   }
   @Patch(':id/stock') @UseGuards(SomenteAdministrador) async estoque(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() d: DadosEstoque,
   ) {
     return saidaLivro(await this.catalogo.ajustarEstoque(id, d));
@@ -237,7 +246,7 @@ export class LivrosController {
   @Post(':id/cover')
   @UseGuards(SomenteAdministrador)
   @UseInterceptors(FileInterceptor('cover', { limits: { fileSize: 2 * 1024 * 1024 } }))
-  async enviarCapa(@Param('id') id: string, @UploadedFile() arquivo: any) {
+  async enviarCapa(@Param('id', ParseUUIDPipe) id: string, @UploadedFile() arquivo: any) {
     if (!arquivo) throw new BadRequestException('Selecione uma imagem para a capa.');
     const extensoes: Record<string, string> = {
       'image/jpeg': '.jpg',
@@ -264,11 +273,11 @@ export class LivrosController {
   @Delete(':id/cover')
   @UseGuards(SomenteAdministrador)
   @HttpCode(204)
-  async removerCapa(@Param('id') id: string) {
+  async removerCapa(@Param('id', ParseUUIDPipe) id: string) {
     await this.catalogo.removerCapa(id);
   }
   @Delete(':id') @UseGuards(SomenteAdministrador) @HttpCode(204) async apagar(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     await this.catalogo.desativarLivro(id);
   }
@@ -290,7 +299,7 @@ export class ReservasController {
   @Get() @UseGuards(SomenteAdministrador) async listar() {
     return (await this.circulacao.listarReservas()).map(saidaReserva);
   }
-  @Get(':id') async obter(@Param('id') id: string, @UsuarioAtual() u: any) {
+  @Get(':id') async obter(@Param('id', ParseUUIDPipe) id: string, @UsuarioAtual() u: any) {
     const r = await this.circulacao.obterReserva(id);
     if (u.perfil !== 'ROLE_ADMIN' && r.aluno.id !== u.id)
       throw new (await import('@nestjs/common')).ForbiddenException(
@@ -299,18 +308,18 @@ export class ReservasController {
     return saidaReserva(r);
   }
   @Patch(':id/cancel') @UseGuards(SomenteAluno) async cancelar(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @UsuarioAtual() u: any,
   ) {
     return saidaReserva(await this.circulacao.cancelarReserva(id, u.id));
   }
   @Patch(':id/pickup') @UseGuards(SomenteAdministrador) async retirar(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     return saidaReserva(await this.circulacao.retirar(id));
   }
   @Patch(':id/return') @UseGuards(SomenteAdministrador) async devolver(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     return saidaReserva(await this.circulacao.devolver(id));
   }
@@ -331,11 +340,11 @@ export class FilaController {
   @Get() @UseGuards(SomenteAdministrador) async listar() {
     return (await this.circulacao.listarFila()).map(saidaFila);
   }
-  @Get(':id') async obter(@Param('id') id: string) {
+  @Get(':id') async obter(@Param('id', ParseUUIDPipe) id: string) {
     return saidaFila(await this.circulacao.obterFila(id));
   }
   @Patch(':id/cancel') @UseGuards(SomenteAluno) async cancelar(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @UsuarioAtual() u: any,
   ) {
     return saidaFila(await this.circulacao.cancelarFila(id, u.id));
