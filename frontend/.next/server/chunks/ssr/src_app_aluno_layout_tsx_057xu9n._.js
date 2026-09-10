@@ -1,0 +1,3 @@
+module.exports=[94843,a=>{"use strict";a.s(["default",()=>b]);let b=(0,a.i(11857).registerClientReference)(function(){throw Error("Attempted to call the default export of [project]/src/app/aluno/layout.tsx from the server, but it's on the client. It's not possible to invoke a client function from the server, it can only be rendered as a Component or passed to props of a Client Component.")},"[project]/src/app/aluno/layout.tsx","default")},7819,a=>{"use strict";var b=a.i(94843);a.n(b)},98305,function(a){a.n(a.i(7819))}];
+
+//# sourceMappingURL=src_app_aluno_layout_tsx_057xu9n._.js.map

@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    volumes: ["capas_biblioteca:/aplicacao/uploads"]
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      SESSION_SECRET: ${SESSION_SECRET:-segredo-local-altere-em-producao}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      DATABASE_SYNCHRONIZE: "true"
+    ports: ["8080:8080"]
+volumes:
+  capas_biblioteca:

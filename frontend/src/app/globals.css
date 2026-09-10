@@ -1,0 +1,297 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* ── Slate / Navy palette ─────────────────────────────────── */
+  --color-slate-950: #0f1d2d;
+  --color-slate-900: #162a3e;
+  --color-slate-800: #1e3a54;
+  --color-slate-700: #2a5070;
+  --color-slate-600: #3a6585;
+  --color-slate-500: #5a879f;
+  --color-slate-400: #7ea8c0;
+  --color-slate-300: #a5c5d8;
+  --color-slate-200: #ccdde8;
+  --color-slate-100: #e8eff4;
+  --color-slate-50:  #f4f7fa;
+
+  /* ── Zinc overrides (mirrors slate for consistency) ──────── */
+  --color-zinc-950: #0f1d2d;
+  --color-zinc-900: #162a3e;
+  --color-zinc-800: #1e3a54;
+  --color-zinc-700: #2a5070;
+  --color-zinc-600: #3a6585;
+  --color-zinc-500: #5a879f;
+  --color-zinc-400: #7ea8c0;
+  --color-zinc-300: #a5c5d8;
+  --color-zinc-200: #ccdde8;
+  --color-zinc-100: #e8eff4;
+  --color-zinc-50:  #f4f7fa;
+
+  /* ── Warm Sand accent token ─────────────────────────────── */
+  --color-sand-500: #d5c4b7;
+  --color-sand-600: #c4b1a3;
+  --color-sand-700: #b29f90;
+
+  /* ── Font families ──────────────────────────────────────── */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL RESETS & BASE STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #f4f2ee;
+  color: #1a2332;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+html.dark body {
+  background-color: #0f1d2d;
+  color: #e8eff4;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TYPOGRAPHY HIERARCHY
+   ═══════════════════════════════════════════════════════════════ */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLLBAR — LIGHT & DARK
+   ═══════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ccdde8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a5c5d8;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #1e3a54;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #2a5070;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FOCUS STYLES (Accessibility)
+   ═══════════════════════════════════════════════════════════════ */
+
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MICRO-ANIMATION KEYFRAMES
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY ANIMATION CLASSES
+   ═══════════════════════════════════════════════════════════════ */
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out both;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODAL OVERLAY & TRANSITIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+.modal-overlay {
+  animation: fadeIn 0.2s ease-out both;
+}
+
+.modal-content {
+  animation: scaleIn 0.25s ease-out both;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   REDUCED MOTION — ACCESSIBILITY (Section 21 of the guide)
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LANDING PAGE — SECTION STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
+.landing-section {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-hero {
+  background: linear-gradient(
+    165deg,
+    #f4f2ee 0%,
+    #e8eff4 40%,
+    #ccdde8 100%
+  );
+}
+
+html.dark .landing-hero {
+  background: linear-gradient(
+    165deg,
+    #0f1d2d 0%,
+    #162a3e 40%,
+    #1e3a54 100%
+  );
+}
+
+.landing-gradient-text {
+  background: linear-gradient(135deg, #2a5070 0%, #3b82f6 50%, #5a879f 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+html.dark .landing-gradient-text {
+  background: linear-gradient(135deg, #7ea8c0 0%, #60a5fa 50%, #a5c5d8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GSAP SCROLL TRIGGER HELPERS
+   ═══════════════════════════════════════════════════════════════ */
+
+.gsap-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.gsap-reveal-left {
+  opacity: 0;
+  transform: translateX(-40px);
+}
+
+.gsap-reveal-right {
+  opacity: 0;
+  transform: translateX(40px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CARD INTERACTION STATES
+   ═══════════════════════════════════════════════════════════════ */
+
+.card-interactive {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.08),
+    0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+html.dark .card-interactive:hover {
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.3),
+    0 2px 4px -2px rgb(0 0 0 / 0.2);
+}
+
+.card-interactive:active {
+  transform: scale(0.99);
+}

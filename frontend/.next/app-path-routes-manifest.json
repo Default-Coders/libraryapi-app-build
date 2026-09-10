@@ -1,0 +1,16 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/admin/administradores/page": "/admin/administradores",
+  "/admin/alunos/page": "/admin/alunos",
+  "/admin/categorias/page": "/admin/categorias",
+  "/admin/dashboard/page": "/admin/dashboard",
+  "/admin/livros/page": "/admin/livros",
+  "/admin/reservas/page": "/admin/reservas",
+  "/aluno/dashboard/page": "/aluno/dashboard",
+  "/aluno/perfil/page": "/aluno/perfil",
+  "/aluno/reservas/page": "/aluno/reservas",
+  "/favicon.ico/route": "/favicon.ico",
+  "/icon.png/route": "/icon.png",
+  "/page": "/"
+}
