@@ -1,5 +1,6 @@
 # dependencies
 node_modules/
+.next/*
 .pnp
 .pnp.*
 .yarn/*
@@ -32,6 +33,7 @@ yarn-error.log*
 
 # env files
 .env*
+!.env.example
 
 # vercel
 .vercel
