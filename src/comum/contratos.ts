@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsDateString,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -17,13 +18,19 @@ export class DadosAcesso {
 export class DadosAdministrador {
   @IsString() @IsNotEmpty() name!: string;
   @IsEmail() email!: string;
-  @MinLength(6) password!: string;
 }
 export class DadosAtualizacaoAdministrador {
   @IsString() @IsNotEmpty() name!: string;
   @IsEmail() email!: string;
 }
 export class DadosAluno {
+  @IsString() @IsNotEmpty() name!: string;
+  @IsEmail() email!: string;
+  @IsString() course!: string;
+  @IsString() schoolClass!: string;
+  @IsOptional() @IsString() phone?: string;
+}
+export class DadosRegistroAluno {
   @IsString() @IsNotEmpty() name!: string;
   @IsEmail() email!: string;
   @IsString() @MinLength(6) password!: string;
@@ -66,6 +73,22 @@ export class DadosEstoque {
 }
 export class DadosLivroId {
   @IsUUID() bookId!: string;
+}
+export class DadosResgateSenha {
+  @IsEmail({}, { message: 'E-mail inválido.' }) email!: string;
+  @IsString() @MinLength(6) newPassword!: string;
+}
+export class DadosAtualizacaoReserva {
+  @IsDateString({}, { message: 'Data da reserva inválida.' })
+  createdAt!: string;
+  @IsOptional()
+  @IsDateString({}, { message: 'Prazo de retirada inválido.' })
+  pickupDeadline?: string;
+}
+export class DadosAtualizacaoFila {
+  @IsInt() @Min(1) position!: number;
+  @IsDateString({}, { message: 'Data de entrada inválida.' })
+  createdAt!: string;
 }
 
 export type SessaoUsuario = {
@@ -127,9 +150,11 @@ export const saidaAluno = (aluno: any) => ({
   schoolClass: rotulosTurma[aluno.turma] ?? aluno.turma,
   phone: aluno.telefone,
   active: aluno.ativo,
+  firstLogin: aluno.primeiroAcesso,
 });
 export const saidaReserva = (reserva: any) => ({
   id: reserva.id,
+  active: reserva.ativo,
   createdAt: reserva.reservadoEm,
   pickupDeadline: reserva.prazoRetirada,
   pickupDate: reserva.retiradoEm,

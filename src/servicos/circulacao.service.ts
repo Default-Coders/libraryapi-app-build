@@ -15,6 +15,10 @@ import {
   SituacaoFila,
   SituacaoReserva,
 } from '../dominio/entidades.js';
+import {
+  DadosAtualizacaoFila,
+  DadosAtualizacaoReserva,
+} from '../comum/contratos.js';
 
 const situacoesReservaAtiva = [
   SituacaoReserva.SOLICITADA,
@@ -134,9 +138,12 @@ export class CirculacaoService {
       return this.entrarNaFila(gestor, aluno, livro);
     });
   }
-  async listarReservas(alunoId?: string) {
+  async listarReservas(alunoId?: string, incluirInativos = false) {
     return this.reservas.find({
-      where: { ativo: true, ...(alunoId ? { aluno: { id: alunoId } } : {}) },
+      where: {
+        ...(!incluirInativos ? { ativo: true } : {}),
+        ...(alunoId ? { aluno: { id: alunoId } } : {}),
+      },
       order: { reservadoEm: 'DESC' },
     });
   }
@@ -227,9 +234,12 @@ export class CirculacaoService {
       return reserva;
     });
   }
-  async listarFila(alunoId?: string) {
+  async listarFila(alunoId?: string, incluirInativos = false) {
     return this.fila.find({
-      where: { ativo: true, ...(alunoId ? { aluno: { id: alunoId } } : {}) },
+      where: {
+        ...(!incluirInativos ? { ativo: true } : {}),
+        ...(alunoId ? { aluno: { id: alunoId } } : {}),
+      },
       order: { criadoEm: 'DESC' },
     });
   }
@@ -249,6 +259,106 @@ export class CirculacaoService {
     itens.forEach((i, n) => (i.posicao = n + 1));
     await gestor.save(itens);
   }
+  async atualizarReserva(id: string, dados: DadosAtualizacaoReserva) {
+    const reserva = await this.obterReserva(id);
+    const dataReserva = new Date(dados.createdAt);
+    const prazoRetirada = dados.pickupDeadline
+      ? new Date(dados.pickupDeadline)
+      : undefined;
+    if (prazoRetirada && prazoRetirada < dataReserva)
+      throw new BadRequestException(
+        'O prazo de retirada não pode ser anterior à data da reserva.',
+      );
+    reserva.reservadoEm = dataReserva;
+    reserva.prazoRetirada = prazoRetirada;
+    return this.reservas.save(reserva);
+  }
+
+  async excluirReservaDefinitivamente(id: string) {
+    return this.banco.transaction(async (gestor) => {
+      const repo = gestor.getRepository(Reserva);
+      const reserva = await repo.findOne({
+        where: { id },
+        relations: { livro: true, aluno: true },
+      });
+      if (!reserva) throw new NotFoundException('Reserva não encontrada.');
+      if (reserva.situacao === SituacaoReserva.RETIRADA)
+        throw new ConflictException(
+          'Registre a devolução antes de remover uma reserva com empréstimo ativo.',
+        );
+      if (reserva.ativo && reserva.situacao === SituacaoReserva.SOLICITADA) {
+        const livro = await this.livroBloqueado(gestor, reserva.livro.id);
+        await this.liberarExemplar(gestor, livro);
+      }
+      await repo.remove(reserva);
+    });
+  }
+
+  async atualizarFila(id: string, dados: DadosAtualizacaoFila) {
+    return this.banco.transaction(async (gestor) => {
+      const repo = gestor.getRepository(EntradaFila);
+      const item = await repo.findOne({
+        where: { id, ativo: true },
+        relations: { aluno: true, livro: true },
+      });
+      if (!item)
+        throw new NotFoundException(
+          'Registro de lista de espera não encontrado.',
+        );
+      item.criadoEm = new Date(dados.createdAt);
+      if (item.situacao !== SituacaoFila.AGUARDANDO) {
+        item.posicao = dados.position;
+        return repo.save(item);
+      }
+      const fila = (
+        await repo.find({
+          where: {
+            livro: { id: item.livro.id },
+            situacao: SituacaoFila.AGUARDANDO,
+            ativo: true,
+          },
+          order: { posicao: 'ASC' },
+        })
+      ).filter((entrada) => entrada.id !== item.id);
+      const indice = Math.min(Math.max(dados.position - 1, 0), fila.length);
+      fila.splice(indice, 0, item);
+      fila.forEach((entrada, posicao) => (entrada.posicao = posicao + 1));
+      await repo.save(fila);
+      return item;
+    });
+  }
+
+  async desativarFila(id: string) {
+    return this.removerFila(id, false);
+  }
+
+  async excluirFilaDefinitivamente(id: string) {
+    return this.removerFila(id, true);
+  }
+
+  private async removerFila(id: string, permanente: boolean) {
+    return this.banco.transaction(async (gestor) => {
+      const repo = gestor.getRepository(EntradaFila);
+      const item = await repo.findOne({
+        where: { id },
+        relations: { aluno: true, livro: true },
+      });
+      if (!item)
+        throw new NotFoundException(
+          'Registro de lista de espera não encontrado.',
+        );
+      const deveReordenar =
+        item.ativo && item.situacao === SituacaoFila.AGUARDANDO;
+      if (permanente) await repo.remove(item);
+      else {
+        item.ativo = false;
+        item.situacao = SituacaoFila.CANCELADO;
+        await repo.save(item);
+      }
+      if (deveReordenar) await this.reordenar(gestor, item.livro.id);
+    });
+  }
+
   async cancelarFila(id: string, alunoId: string) {
     return this.banco.transaction(async (gestor) => {
       const item = await gestor

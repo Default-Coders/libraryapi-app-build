@@ -57,6 +57,7 @@ export class Aluno extends EntidadeBase {
   @Column({ name: 'name', length: 150 }) nome!: string;
   @Column({ unique: true, length: 100 }) email!: string;
   @Column({ name: 'password', length: 60 }) senha!: string;
+  @Column({ name: 'first_login', default: true }) primeiroAcesso!: boolean;
   @Column({ name: 'course', type: 'varchar', length: 50 }) curso!: Curso;
   @Column({ name: 'school_class', type: 'varchar', length: 30 }) turma!: Turma;
   @Column({ name: 'phone', nullable: true, length: 20 }) telefone?: string;

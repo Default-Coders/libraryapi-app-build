@@ -1,6 +1,6 @@
 # Contexto do Backend NestJS — Biblioteca da ETE Integral
 
-> Última atualização: 3 de setembro de 2026  
+> Última atualização: 10 de setembro de 2026  
 > Implementação: NestJS/TypeScript  
 > Idioma interno: português do Brasil (`pt-BR`)  
 > Fuso horário da aplicação e do banco: `America/Sao_Paulo`
@@ -326,6 +326,8 @@ Campos: UUID, nome único, descrição e situação ativa. O nome é salvo em ma
 ### 7.4 Livro
 
 Campos: título, autor, editora, ISBN, ano de publicação, quantidade total, quantidade disponível, URL de QR Code, URL da capa, categoria e situação ativa.
+
+> **Nota sobre sinopse**: o frontend exibe um campo `description` no modal de detalhes do livro. Atualmente, a entidade `Livro` não possui esse campo. O frontend mostra "Sinopse não disponível" como fallback. Quando a sinopse for implementada, adicionar uma coluna `description` do tipo `text` à entidade `Livro` e incluí-la no contrato JSON de saída.
 
 - ISBN é opcional, mas, quando informado, deve conter exatamente 10 ou 13 dígitos;
 - ISBN não pode ser duplicado;
@@ -813,8 +815,10 @@ Os testes atuais são unitários de compatibilidade de saída. Ainda é recomend
 4. Mover o rate limit para armazenamento compartilhado caso a API use várias réplicas.
 5. Adicionar documentação OpenAPI/Swagger.
 6. Definir rotação e política de expiração do `SESSION_SECRET`.
-7. Adicionar observabilidade estruturada e métricas avançadas (Health check básico concluído).
+7. ~~Adicionar observabilidade estruturada e métricas avançadas.~~ (Concluído: Health check básico implementado).
 8. Incluir limpeza periódica das sessões e tentativas de acesso antigas.
+9. Adicionar campo `description` (sinopse) à entidade `Livro` para uso no modal de detalhes do frontend.
+10. Registrar rota `POST /auth/register` no CONTEXTO se o frontend continuar enviando cadastros por essa rota.
 
 ## 19. Resumo operacional
 

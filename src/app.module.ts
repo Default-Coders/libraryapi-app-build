@@ -14,6 +14,9 @@ import {
 import { UsuariosService } from './servicos/usuarios.service.js';
 import { CatalogoService } from './servicos/catalogo.service.js';
 import { CirculacaoService } from './servicos/circulacao.service.js';
+import { EmailService } from './servicos/email.service.js';
+import { NotificationService } from './servicos/notification.service.js';
+import { SessoesService } from './servicos/sessoes.service.js';
 import {
   AlunosController,
   AdministradoresController,
@@ -22,6 +25,7 @@ import {
   FilaController,
   HealthController,
   LivrosController,
+  LivrosPublicosController,
   ReservasController,
 } from './controladores/api.controller.js';
 import {
@@ -61,6 +65,9 @@ const entidades = [
           extra: {
             max: 20,
             connectionTimeoutMillis: 5000,
+            ssl: {
+              rejectUnauthorized: false,
+            },
           },
         };
       },
@@ -72,6 +79,7 @@ const entidades = [
     AdministradoresController,
     AlunosController,
     CategoriasController,
+    LivrosPublicosController,
     LivrosController,
     ReservasController,
     FilaController,
@@ -81,6 +89,9 @@ const entidades = [
     UsuariosService,
     CatalogoService,
     CirculacaoService,
+    EmailService,
+    NotificationService,
+    SessoesService,
     Autenticado,
     SomenteAdministrador,
     SomenteAluno,
