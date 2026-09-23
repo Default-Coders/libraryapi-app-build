@@ -8,6 +8,22 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export enum SituacaoNotificacao {
+  PENDENTE = 'PENDING',
+  ENVIADA = 'SENT',
+  FALHA = 'FAILED',
+  CANCELADA = 'CANCELLED',
+}
+
+export enum TipoNotificacao {
+  BOAS_VINDAS = 'BOAS_VINDAS',
+  RESERVA_CRIADA = 'RESERVA_CRIADA',
+  LIVRO_DISPONIVEL = 'LIVRO_DISPONIVEL',
+  RESERVA_EXPIRANDO = 'RESERVA_EXPIRANDO',
+  RESERVA_EXPIRADA = 'RESERVA_EXPIRADA',
+  SENHA_TEMPORARIA = 'SENHA_TEMPORARIA',
+}
+
 export enum Curso {
   DESENVOLVIMENTO_DE_SISTEMAS = 'SYSTEMS_DEVELOPMENT',
   NUTRICAO_E_DIETETICA = 'NUTRITION_AND_DIETETICS',
@@ -134,4 +150,22 @@ export class TentativaAcesso {
     nullable: true,
   })
   bloqueadoAte?: Date;
+}
+
+@Entity('tb_notification')
+export class RegistroNotificacao {
+  @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column({ name: 'tipo', type: 'varchar', length: 50 }) tipo!: TipoNotificacao;
+  @Column({ name: 'destinatario', length: 150 }) destinatario!: string;
+  @Column({ name: 'assunto', length: 250 }) assunto!: string;
+  @Column({ name: 'situacao', type: 'varchar', length: 20, default: 'PENDING' })
+  situacao!: SituacaoNotificacao;
+  @Column({ name: 'tentativas', default: 0 }) tentativas!: number;
+  @Column({ name: 'chave_idempotencia', length: 150, nullable: true })
+  chaveIdempotencia?: string;
+  @Column({ name: 'erro_resumido', type: 'text', nullable: true })
+  erroResumido?: string;
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' }) criadoEm!: Date;
+  @Column({ name: 'enviado_em', type: 'timestamp', nullable: true })
+  enviadoEm?: Date;
 }

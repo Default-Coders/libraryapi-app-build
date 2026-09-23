@@ -804,14 +804,14 @@ Os testes atuais são unitários de compatibilidade de saída. Ainda é recomend
 - retirada aceita reserva `REQUESTED` ou `APPROVED`, pois não há endpoint de aprovação no contrato original;
 - quando a reserva automática entra na fila, a resposta é um JSON de sucesso indicando `fila: true`;
 - o limite de requisições é mantido em memória por processo;
-- envio de e-mail não foi conectado nesta versão; a promoção da fila e a criação da reserva acontecem normalmente, mas sem notificação externa;
+- e-mail de notificação integrado via `NotificationService` (Reboot V1): agendamento assíncrono, retry (máx 3), idempotência por chave, histórico em `tb_notification`;
 - o esquema é sincronizado pelo TypeORM em desenvolvimento; produção deve usar sincronização desativada e migrações controladas.
 
 ## 18. Limitações e próximos passos recomendados
 
 1. ~~Criar migrações TypeORM e definir `DATABASE_SYNCHRONIZE=false` em produção.~~ (Concluído: `typeorm-datasource.ts` configurado).
 2. Implementar testes automatizados unitários, e2e e de integração com PostgreSQL isolado.
-3. Integrar serviço de e-mail para avisos de promoção da fila.
+3. ~~Integrar serviço de e-mail para avisos de promoção da fila.~~ (Concluído: NotificationService Reboot V1 implementado).
 4. Mover o rate limit para armazenamento compartilhado caso a API use várias réplicas.
 5. Adicionar documentação OpenAPI/Swagger.
 6. Definir rotação e política de expiração do `SESSION_SECRET`.
@@ -833,4 +833,69 @@ Os testes atuais são unitários de compatibilidade de saída. Ainda é recomend
 - bloqueio de login: 5 falhas por 15 minutos;
 - limite: 60 requisições/minuto;
 - exclusão normal: lógica;
-- idioma da implementação e mensagens: português do Brasil.
+- idioma da implementação e mensagens: português do Brasil;
+- notificações: agendadas em `tb_notification`, processadas a cada 5 minutos via cron.
+
+---
+
+## 20. Sistema de Notificações por E-mail (Bot V1)
+
+> Implementado em 23/09/2026 conforme `BACKLOG_BOT_REBOOT_V1.md`.
+
+### Arquitetura
+
+```
+CirculacaoService / UsuariosService
+  │
+  └─► NotificationService.agendar*()
+        │  (cria registro PENDING em tb_notification)
+        │
+        └─► @Cron(a cada 5 min) processarPendentes()
+              │
+              ├─► notificacao-templates.ts  (monta HTML/texto)
+              │
+              └─► EmailService.enviar()     (transport-only, nodemailer)
+                    │
+                    ├── ok  → registro SENT
+                    └── err → registro FAILED (após 3 tentativas)
+```
+
+### Eventos de domínio mapeados
+
+| Tipo (`TipoNotificacao`) | Disparado por | Chave de idempotência |
+|---|---|---|
+| `BOAS_VINDAS` | criação de aluno/admin | `boas-vindas:{email}` |
+| `SENHA_TEMPORARIA` | redefinição de senha pelo admin | _(sem chave — cada redefinição gera novo registro)_ |
+| `RESERVA_CRIADA` | `CirculacaoService.reservar()` | `reserva-criada:{reservaId}` |
+| `LIVRO_DISPONIVEL` | `CirculacaoService.liberarExemplar()` | `livro-disponivel:{reservaId}` |
+| `RESERVA_EXPIRANDO` | cron de aviso (4h antes) | `reserva-expirando:{reservaId}` |
+| `RESERVA_EXPIRADA` | `CirculacaoService.expirar()` | `reserva-expirada:{reservaId}` |
+
+### Regras de confiabilidade
+
+- Falha de e-mail **não desfaz** operações de circulação (BOT-012).
+- Máximo **3 tentativas** antes de marcar como `FAILED` (BOT-013).
+- Idempotência garantida por `chave_idempotencia` único na tabela (BOT-011).
+- E-mail de boas-vindas **não envia senha em texto puro** (BOT-010); a senha temporária aparece apenas no log do servidor.
+
+### Variáveis de ambiente necessárias
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=seu-email@gmail.com
+SMTP_PASSWORD=sua-senha-de-app-gmail
+SMTP_FROM="Biblioteca ETE <seu-email@gmail.com>"
+FRONTEND_URL=http://localhost:3000
+TZ=America/Sao_Paulo
+```
+
+Se `SMTP_HOST`, `SMTP_USER` ou `SMTP_PASSWORD` não estiverem definidos, o sistema inicializa normalmente com e-mail desativado (log `WARN`).
+
+### Arquivos
+
+- `src/servicos/email.service.ts` — transport-only (nodemailer)
+- `src/servicos/notificacao-templates.ts` — templates HTML/texto (funções puras)
+- `src/servicos/notification.service.ts` — orquestrador + cron
+- `src/dominio/entidades.ts` — entidade `RegistroNotificacao` + tabela `tb_notification`

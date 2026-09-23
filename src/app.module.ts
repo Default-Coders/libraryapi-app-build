@@ -8,6 +8,7 @@ import {
   Categoria,
   EntradaFila,
   Livro,
+  RegistroNotificacao,
   Reserva,
   TentativaAcesso,
 } from './dominio/entidades.js';
@@ -41,6 +42,7 @@ const entidades = [
   Reserva,
   EntradaFila,
   TentativaAcesso,
+  RegistroNotificacao,
 ];
 @Module({
   imports: [

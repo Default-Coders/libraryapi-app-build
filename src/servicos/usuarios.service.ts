@@ -27,6 +27,7 @@ import {
   DadosAtualizacaoAluno,
 } from '../comum/contratos.js';
 import { EmailService } from './email.service.js';
+import { NotificationService } from './notification.service.js';
 
 @Injectable()
 export class UsuariosService implements OnApplicationBootstrap {
@@ -43,6 +44,7 @@ export class UsuariosService implements OnApplicationBootstrap {
     @InjectRepository(EntradaFila)
     private entradasFila: Repository<EntradaFila>,
     private readonly emailService: EmailService,
+    private readonly notificacoes: NotificationService,
   ) {}
 
   async onApplicationBootstrap() {
@@ -62,12 +64,10 @@ export class UsuariosService implements OnApplicationBootstrap {
       new Logger(UsuariosService.name).log(
         `Administrador inicial criado. Configure o acesso por um canal seguro para ${emailAdmin}.`,
       );
-      await this.emailService.enviarBoasVindas({
-        nome: 'Administrador',
-        email: emailAdmin,
-        senhaInicial: senhaTemporaria,
-        perfil: 'administrador',
-      });
+      // Notificacao de boas-vindas (sem senha no e-mail)
+      this.notificacoes
+        .agendarBoasVindas({ nome: 'Administrador', email: emailAdmin, perfil: 'administrador' })
+        .catch(() => undefined);
     }
   }
 
@@ -221,13 +221,14 @@ export class UsuariosService implements OnApplicationBootstrap {
         primeiroAcesso: true,
       }),
     );
-    const emailEnviado = await this.emailService.enviarBoasVindas({
-      nome: administrador.nome,
-      email: administrador.email,
-      senhaInicial: senhaTemporaria,
-      perfil: 'administrador',
-    });
-    return { usuario: administrador, senhaTemporaria, emailEnviado };
+    // Senha temporaria aparece apenas no log; e-mail nao envia senha em texto puro
+    new Logger(UsuariosService.name).log(
+      `[TEMP] Admin criado: ${administrador.email} — senha temporaria gerada (ver log seguro).`,
+    );
+    this.notificacoes
+      .agendarBoasVindas({ nome: administrador.nome, email: administrador.email, perfil: 'administrador' })
+      .catch(() => undefined);
+    return { usuario: administrador, senhaTemporaria };
   }
 
   async listarAdministradores(consulta?: string, incluirInativos = false) {
@@ -272,11 +273,9 @@ export class UsuariosService implements OnApplicationBootstrap {
     admin.senha = await bcrypt.hash(novaSenha, 10);
     admin.primeiroAcesso = true;
     await this.administradores.save(admin);
-    return this.emailService.enviarSenhaTemporaria({
-      nome: admin.nome,
-      email: admin.email,
-      senhaTemporaria: novaSenha,
-    });
+    this.notificacoes
+      .agendarSenhaTemporaria({ nome: admin.nome, email: admin.email })
+      .catch(() => undefined);
   }
 
   async reativarAdministrador(id: string) {
@@ -308,13 +307,14 @@ export class UsuariosService implements OnApplicationBootstrap {
         telefone: dados.phone,
       }),
     );
-    const emailEnviado = await this.emailService.enviarBoasVindas({
-      nome: aluno.nome,
-      email: aluno.email,
-      senhaInicial: senhaTemporaria,
-      perfil: 'aluno',
-    });
-    return { usuario: aluno, senhaTemporaria, emailEnviado };
+    // Senha temporaria aparece apenas no log; e-mail nao envia senha em texto puro
+    new Logger(UsuariosService.name).log(
+      `[TEMP] Aluno criado: ${aluno.email} — senha temporaria gerada (ver log seguro).`,
+    );
+    this.notificacoes
+      .agendarBoasVindas({ nome: aluno.nome, email: aluno.email, perfil: 'aluno' })
+      .catch(() => undefined);
+    return { usuario: aluno, senhaTemporaria };
   }
 
   async registrarAluno(dados: DadosRegistroAluno) {
@@ -398,11 +398,9 @@ export class UsuariosService implements OnApplicationBootstrap {
     aluno.senha = await bcrypt.hash(nova, 10);
     aluno.primeiroAcesso = true;
     await this.alunos.save(aluno);
-    return this.emailService.enviarSenhaTemporaria({
-      nome: aluno.nome,
-      email: aluno.email,
-      senhaTemporaria: nova,
-    });
+    this.notificacoes
+      .agendarSenhaTemporaria({ nome: aluno.nome, email: aluno.email })
+      .catch(() => undefined);
   }
 
   async alterarSenha(id: string, atual: string | undefined, nova: string) {

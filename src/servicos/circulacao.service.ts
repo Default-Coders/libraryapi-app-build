@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
@@ -19,6 +20,7 @@ import {
   DadosAtualizacaoFila,
   DadosAtualizacaoReserva,
 } from '../comum/contratos.js';
+import { NotificationService } from './notification.service.js';
 
 const situacoesReservaAtiva = [
   SituacaoReserva.SOLICITADA,
@@ -32,10 +34,13 @@ const situacoesFilaAtiva = [
 ];
 @Injectable()
 export class CirculacaoService {
+  private readonly logger = new Logger(CirculacaoService.name);
+
   constructor(
     private banco: DataSource,
     @InjectRepository(Reserva) private reservas: Repository<Reserva>,
     @InjectRepository(EntradaFila) private fila: Repository<EntradaFila>,
+    private readonly notificacoes: NotificationService,
   ) {}
   private async livroBloqueado(gestor: EntityManager, id: string) {
     const livro = await gestor
@@ -116,7 +121,7 @@ export class CirculacaoService {
       const agora = new Date();
       const prazo = new Date(agora);
       prazo.setDate(prazo.getDate() + 2);
-      return repo.save(
+      const resultado = await repo.save(
         repo.create({
           aluno,
           livro,
@@ -125,6 +130,11 @@ export class CirculacaoService {
           situacao: SituacaoReserva.SOLICITADA,
         }),
       );
+      // Notifica o aluno — falha de e-mail não desfaz a reserva
+      this.notificacoes.agendarReservaCriada(resultado).catch((err) =>
+        this.logger.error(`Erro ao agendar notificacao de reserva criada: ${err}`),
+      );
+      return resultado;
     });
   }
   async entrar(alunoId: string, livroId: string) {
@@ -169,13 +179,17 @@ export class CirculacaoService {
     const agora = new Date();
     const prazo = new Date(agora);
     prazo.setDate(prazo.getDate() + 2);
-    await gestor.save(Reserva, {
+    const novaReserva = await gestor.save(Reserva, {
       aluno: proximo.aluno,
       livro,
       reservadoEm: agora,
       prazoRetirada: prazo,
       situacao: SituacaoReserva.SOLICITADA,
     });
+    // Notifica o aluno promovido — falha de e-mail não desfaz a promoção
+    this.notificacoes.agendarLivroDisponivel(proximo, novaReserva).catch((err) =>
+      this.logger.error(`Erro ao agendar notificacao de livro disponivel: ${err}`),
+    );
     await this.reordenar(gestor, livro.id);
   }
   async cancelarReserva(id: string, alunoId: string) {
@@ -392,6 +406,10 @@ export class CirculacaoService {
         await gestor.save(reserva);
         const livro = await this.livroBloqueado(gestor, reserva.livro.id);
         await this.liberarExemplar(gestor, livro);
+        // Notifica o aluno — falha de e-mail não desfaz a expiração
+        this.notificacoes.agendarReservaExpirada(reserva).catch((err) =>
+          this.logger.error(`Erro ao agendar notificacao de reserva expirada: ${err}`),
+        );
       });
   }
 }

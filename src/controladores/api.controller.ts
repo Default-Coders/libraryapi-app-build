@@ -169,7 +169,7 @@ export class AdministradoresController {
   ) {}
 
   @Post() async criar(@Body() d: DadosAdministrador) {
-    const { usuario: a, senhaTemporaria, emailEnviado } =
+    const { usuario: a, senhaTemporaria } =
       await this.usuarios.criarAdministrador(d);
     return {
       id: a.id,
@@ -178,7 +178,6 @@ export class AdministradoresController {
       firstLogin: a.primeiroAcesso,
       active: a.ativo,
       temporaryPassword: senhaTemporaria,
-      emailSent: emailEnviado,
     };
   }
 
@@ -214,13 +213,9 @@ export class AdministradoresController {
     @UsuarioAtual() u: any,
     @Req() req: any,
   ) {
-    const emailEnviado = await this.usuarios.redefinirSenhaAdministrador(
-      id,
-      d.newPassword,
-    );
+    await this.usuarios.redefinirSenhaAdministrador(id, d.newPassword);
     await this.sessoes.revogarDoUsuario(id);
     if (id === u.id) await renovarSessao(req, u);
-    return { emailSent: emailEnviado };
   }
 
   @Patch(':id/reactivate') @HttpCode(204) async reativar(
@@ -248,12 +243,11 @@ export class AlunosController {
   ) {}
 
   @Post() @UseGuards(SomenteAdministrador) async criar(@Body() d: DadosAluno) {
-    const { usuario, senhaTemporaria, emailEnviado } =
+    const { usuario, senhaTemporaria } =
       await this.usuarios.criarAluno(d);
     return {
       ...saidaAluno(usuario),
       temporaryPassword: senhaTemporaria,
-      emailSent: emailEnviado,
     };
   }
 
