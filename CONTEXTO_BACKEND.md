@@ -1,13 +1,13 @@
-# Contexto do Backend NestJS — Biblioteca da ETE Integral
+# Contexto do Backend NestJS — Biblioteca da ETE José Humberto de Moura Cavalcanti
 
-> Última atualização: 10 de setembro de 2026  
+> Última atualização: 23 de setembro de 2026  
 > Implementação: NestJS/TypeScript  
 > Idioma interno: português do Brasil (`pt-BR`)  
 > Fuso horário da aplicação e do banco: `America/Sao_Paulo`
 
 ## 1. Visão geral
 
-API REST do sistema de biblioteca escolar da ETE Integral. Esta aplicação é a reimplementação em NestJS do backend Java/Spring Boot existente e mantém compatibilidade com:
+API REST do sistema de biblioteca escolar da ETE José Humberto de Moura Cavalcanti. Esta aplicação é a reimplementação em NestJS do backend Java/Spring Boot existente e mantém compatibilidade com:
 
 - o frontend Next.js do projeto;
 - os campos JSON públicos usados pelo backend Java;
