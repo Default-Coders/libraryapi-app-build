@@ -39,12 +39,12 @@ async function iniciar() {
       secret: sessionSecret,
       resave: false,
       saveUninitialized: false,
-      cookie: {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 8 * 60 * 60 * 1000,
-      },
+   cookie: {
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  secure: process.env.NODE_ENV === 'production',
+  maxAge: 8 * 60 * 60 * 1000,
+},
       store: new Armazenamento({
         pool: new pg.Pool({
           connectionString: url,
