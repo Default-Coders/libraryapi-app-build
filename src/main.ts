@@ -9,44 +9,56 @@ import connectPgSimple from 'connect-pg-simple';
 import pg from 'pg';
 import { AppModule } from './app.module.js';
 import { FiltroErros } from './comum/filtro-erros.js';
+
 async function iniciar() {
   const aplicacao = await NestFactory.create<NestExpressApplication>(AppModule);
+  
+  // Se a aplicação estiver atrás de um proxy reverso em produção (ex: Nginx, Render, Heroku) 
+  // e utilizar HTTPS, descomente a linha abaixo para que os cookies 'secure: true' funcionem corretamente:
+  // aplicacao.set('trust proxy', 1);
+
   const pastaUploads = resolve(process.cwd(), 'uploads');
   await mkdir(resolve(pastaUploads, 'covers'), { recursive: true });
   aplicacao.useStaticAssets(pastaUploads, { prefix: '/uploads/' });
+
   const origens = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000')
     .split(',')
     .map((o) => o.trim());
+
   aplicacao.enableCors({
     origin: origens,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Cache-Control', 'Authorization', 'Content-Type'],
-exposedHeaders: ['Set-Cookie'],
+    exposedHeaders: ['Set-Cookie'],
   });
+
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) {
     throw new Error('DATABASE_URL is not defined in the environment variables.');
   }
+  
   const url = dbUrl.replace(/^jdbc:/, '');
   const Armazenamento = connectPgSimple(session);
   const sessionSecret = process.env.SESSION_SECRET;
+  
   if (!sessionSecret) {
     throw new Error('SESSION_SECRET is not defined in the environment variables.');
   }
+
   aplicacao.use(
     session({
       name: 'JSESSIONID',
       secret: sessionSecret,
       resave: false,
       saveUninitialized: false,
-   cookie: {
-  httpOnly: true,
-  sameSite: process.env.NODE_ENV === 'production'? 'none' : 'lax',
-  secure: processo.env.NODE_ENV === 'production',
-  maxAge: 8 * 60 * 60 * 1000,
-  path: '/',
-},
+      cookie: {
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        secure: process.env.NODE_ENV === 'production', // Correção efetuada aqui
+        maxAge: 8 * 60 * 60 * 1000,
+        path: '/',
+      },
       store: new Armazenamento({
         pool: new pg.Pool({
           connectionString: url,
@@ -58,22 +70,22 @@ exposedHeaders: ['Set-Cookie'],
       }),
     }),
   );
-  // Rate limit: Atualmente utiliza um Map em memória (60 req/min).
-  // Avaliação: Em um ambiente com múltiplas instâncias (ex: Kubernetes), o limite será aplicado
-  // por instância, o que é aceitável para o cenário inicial. Se for estritamente necessário
-  // um limite global, deve-se usar Redis ou uma tabela no banco (ex: Supabase) como armazenamento compartilhado.
+
   const acessos = new Map<string, { inicio: number; quantidade: number }>();
+  
   aplicacao.use((requisicao: any, resposta: any, proximo: () => void) => {
-    const chave =
-      requisicao.session?.usuario?.id ?? requisicao.ip ?? 'desconhecido';
+    const chave = requisicao.session?.usuario?.id ?? requisicao.ip ?? 'desconhecido';
     const agora = Date.now();
     const atual = acessos.get(chave);
+    
     if (!atual || agora - atual.inicio >= 60_000) {
       acessos.set(chave, { inicio: agora, quantidade: 1 });
       return proximo();
     }
+    
     atual.quantidade++;
-    if (atual.quantidade > 60)
+    
+    if (atual.quantidade > 60) {
       return resposta.status(429).json({
         timestamp: new Date().toISOString(),
         status: 429,
@@ -81,13 +93,18 @@ exposedHeaders: ['Set-Cookie'],
         mensagem: 'Limite de 60 requisições por minuto excedido.',
         path: requisicao.originalUrl,
       });
+    }
+    
     proximo();
   });
+
   aplicacao.setGlobalPrefix('api');
   aplicacao.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true }),
   );
   aplicacao.useGlobalFilters(new FiltroErros());
+  
   await aplicacao.listen(Number(process.env.PORT ?? 8080));
 }
+
 void iniciar();
