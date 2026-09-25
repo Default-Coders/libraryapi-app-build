@@ -21,7 +21,8 @@ async function iniciar() {
     origin: origens,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Cache-Control', 'Content-Type'],
+    allowedHeaders: ['Cache-Control', 'Authorization', 'Content-Type'],
+exposedHeaders: ['Set-Cookie'],
   });
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) {
@@ -41,9 +42,10 @@ async function iniciar() {
       saveUninitialized: false,
    cookie: {
   httpOnly: true,
-  sameSite: 'lax',
-  secure: true,
+  sameSite: process.env.NODE_ENV === 'production'? 'none' : 'lax',
+  secure: processo.env.NODE_ENV === 'production',
   maxAge: 8 * 60 * 60 * 1000,
+  path: '/',
 },
       store: new Armazenamento({
         pool: new pg.Pool({
