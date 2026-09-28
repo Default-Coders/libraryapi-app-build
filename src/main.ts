@@ -15,7 +15,7 @@ async function iniciar() {
   
   // Se a aplicação estiver atrás de um proxy reverso em produção (ex: Nginx, Render, Heroku) 
   // e utilizar HTTPS, descomente a linha abaixo para que os cookies 'secure: true' funcionem corretamente:
-  // aplicacao.set('trust proxy', 1);
+  aplicacao.set('trust proxy', 1);
 
   const pastaUploads = resolve(process.cwd(), 'uploads');
   await mkdir(resolve(pastaUploads, 'covers'), { recursive: true });
