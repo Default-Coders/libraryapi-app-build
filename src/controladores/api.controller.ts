@@ -150,10 +150,11 @@ export class AutenticacaoController {
         resolve();
       });
     });
+    const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT || !!process.env.RENDER;
     res.clearCookie('JSESSIONID', {
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      sameSite: isProduction ? 'none' : 'lax',
+      secure: isProduction,
       path: '/',
     });
     res.status(204).send();

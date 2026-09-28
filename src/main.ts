@@ -46,6 +46,8 @@ async function iniciar() {
     throw new Error('SESSION_SECRET is not defined in the environment variables.');
   }
 
+  const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT || !!process.env.RENDER;
+
   aplicacao.use(
     session({
       name: 'JSESSIONID',
@@ -54,8 +56,8 @@ async function iniciar() {
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        secure: process.env.NODE_ENV === 'production', // Correção efetuada aqui
+        sameSite: isProduction ? 'none' : 'lax',
+        secure: isProduction,
         maxAge: 8 * 60 * 60 * 1000,
         path: '/',
       },
